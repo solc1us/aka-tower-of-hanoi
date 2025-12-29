@@ -107,14 +107,23 @@
             <ul>
                 <li><strong>Recursive Approach:</strong> Uses the call stack with O(n) space complexity</li>
                 <li><strong>Iterative Approach:</strong> Uses a traditional loop with O(1) space complexity</li>
-                <li><strong>Time Complexity:</strong> Both require O(2<sup>n</sup>) moves, but iterative is typically faster due to lower overhead</li>
+                <li><strong>Time Complexity:</strong> Both require O(2<sup>n</sup>) moves</li>
                 <li><strong>Note:</strong> For large values of n, the execution time increases exponentially</li>
             </ul>
+        </div>
+
+        <div class="automated-test-section">
+            <h3>🧪 Automated Performance Testing</h3>
+            <p>Run comprehensive tests from n=2 to n=30 and compare performance metrics</p>
+            <button class="test-button" onclick="runAutomatedTests()">Run Automated Tests</button>
+            <div class="test-loading" id="testLoading">
+                <div class="spinner"></div>
+                <p>Running tests... <span id="testProgress"></span></p>
+            </div>
+            <div id="testResultsTable"></div>
         </div>
     </div>
 
     <script src="script.js"></script>
-</body>
-</html>
 </body>
 </html>

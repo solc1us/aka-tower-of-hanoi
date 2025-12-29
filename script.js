@@ -8,8 +8,8 @@ function analyzeAlgorithm() {
     loadingContainer.classList.remove('show');
 
     // Validation
-    if (!n || n < 1 || n > 35) {
-        errorBox.textContent = '⚠️ Please enter a number between 1 and 35';
+    if (!n || n < 1 || n > 30) {
+        errorBox.textContent = '⚠️ Please enter a number between 1 and 30';
         errorBox.classList.add('show');
         return;
     }
@@ -41,67 +41,101 @@ function analyzeAlgorithm() {
 }
 
 function measureRecursive(n) {
-    const startTime = performance.now();
+    // Run multiple iterations for more accurate timing
+    const iterations = n <= 15 ? 100 : n <= 20 ? 10 : 1;
+    let totalTime = 0;
+    let finalMoveCount = 0;
     
-    function hanoi(n, source, destination, auxiliary) {
-        if (n === 1) {
-            return;
+    for (let i = 0; i < iterations; i++) {
+        const startTime = performance.now();
+        
+        const stacks = {
+            A: Array.from({length: n}, (_, i) => n - i),
+            B: [],
+            C: []
+        };
+        
+        let moveCount = 0;
+        
+        function hanoi(n, source, destination, auxiliary) {
+            if (n === 1) {
+                const disk = stacks[source].pop();
+                stacks[destination].push(disk);
+                moveCount++;
+                return;
+            }
+            hanoi(n - 1, source, auxiliary, destination);
+            
+            const disk = stacks[source].pop();
+            stacks[destination].push(disk);
+            moveCount++;
+            
+            hanoi(n - 1, auxiliary, destination, source);
         }
-        hanoi(n - 1, source, auxiliary, destination);
-        hanoi(n - 1, auxiliary, destination, source);
-    }
 
-    hanoi(n, 'A', 'C', 'B');
+        hanoi(n, 'A', 'C', 'B');
+        
+        const endTime = performance.now();
+        totalTime += (endTime - startTime);
+        finalMoveCount = moveCount;
+    }
     
-    const endTime = performance.now();
     return {
-        time: endTime - startTime,
-        moves: Math.pow(2, n) - 1
+        time: totalTime / iterations,
+        moves: finalMoveCount
     };
 }
 
 function measureIterative(n) {
-    const startTime = performance.now();
-    
-    const stacks = {
-        A: Array.from({length: n}, (_, i) => n - i),
-        B: [],
-        C: []
-    };
-
+    // Run multiple iterations for more accurate timing
+    const iterations = n <= 15 ? 100 : n <= 20 ? 10 : 1;
+    let totalTime = 0;
     const totalMoves = Math.pow(2, n) - 1;
-    let moveCount = 0;
+    
+    for (let i = 0; i < iterations; i++) {
+        const startTime = performance.now();
+        
+        const stacks = {
+            A: Array.from({length: n}, (_, i) => n - i),
+            B: [],
+            C: []
+        };
 
-    for (let i = 1; moveCount < totalMoves; i++) {
-        const modulo = i % 3;
-        let source, destination;
+        let moveCount = 0;
 
-        if (modulo === 1) {
-            source = 'A';
-            destination = 'C';
-        } else if (modulo === 2) {
-            source = 'A';
-            destination = 'B';
-        } else {
-            source = 'B';
-            destination = 'C';
+        for (let j = 1; moveCount < totalMoves; j++) {
+            const modulo = j % 3;
+            let source, destination;
+
+            if (modulo === 1) {
+                source = 'A';
+                destination = 'C';
+            } else if (modulo === 2) {
+                source = 'A';
+                destination = 'B';
+            } else {
+                source = 'B';
+                destination = 'C';
+            }
+
+            // Ensure proper disk movement (never place larger on smaller)
+            if (stacks[destination].length === 0 || stacks[source][stacks[source].length - 1] < stacks[destination][stacks[destination].length - 1]) {
+                const disk = stacks[source].pop();
+                stacks[destination].push(disk);
+            } else {
+                const disk = stacks[destination].pop();
+                stacks[source].push(disk);
+            }
+
+            moveCount++;
         }
 
-        // Ensure proper disk movement (never place larger on smaller)
-        if (stacks[destination].length === 0 || stacks[source][stacks[source].length - 1] < stacks[destination][stacks[destination].length - 1]) {
-            const disk = stacks[source].pop();
-            stacks[destination].push(disk);
-        } else {
-            const disk = stacks[destination].pop();
-            stacks[source].push(disk);
-        }
-
-        moveCount++;
+        const endTime = performance.now();
+        totalTime += (endTime - startTime);
     }
-
-    const endTime = performance.now();
+    
     return {
-        time: endTime - startTime,
+        time: totalTime / iterations,
         moves: totalMoves
     };
 }
@@ -153,3 +187,98 @@ document.getElementById('diskCount').addEventListener('keypress', function(event
 window.addEventListener('load', function() {
     analyzeAlgorithm();
 });
+
+// Automated testing function
+async function runAutomatedTests() {
+    const testLoading = document.getElementById('testLoading');
+    const testProgress = document.getElementById('testProgress');
+    const testResultsTable = document.getElementById('testResultsTable');
+    
+    testLoading.style.display = 'block';
+    testResultsTable.innerHTML = '';
+    
+    const results = [];
+    
+    for (let n = 2; n <= 30; n++) {
+        testProgress.textContent = `Testing n=${n}/30`;
+        
+        // Small delay to allow UI update
+        await new Promise(resolve => setTimeout(resolve, 10));
+        
+        try {
+            const recursiveResult = measureRecursive(n);
+            const iterativeResult = measureIterative(n);
+            
+            results.push({
+                n: n,
+                moves: Math.pow(2, n) - 1,
+                recursiveTime: recursiveResult.time,
+                iterativeTime: iterativeResult.time,
+                faster: recursiveResult.time < iterativeResult.time ? 'Recursive' : 'Iterative',
+                ratio: (Math.max(recursiveResult.time, iterativeResult.time) / Math.min(recursiveResult.time, iterativeResult.time)).toFixed(2)
+            });
+        } catch (error) {
+            console.error(`Error testing n=${n}:`, error);
+        }
+    }
+    
+    testLoading.style.display = 'none';
+    displayTestResults(results);
+}
+
+function displayTestResults(results) {
+    const testResultsTable = document.getElementById('testResultsTable');
+    
+    const formatTime = (ms) => {
+        if (ms < 1) {
+            return (ms * 1000).toFixed(4) + ' µs';
+        } else if (ms < 1000) {
+            return ms.toFixed(4) + ' ms';
+        } else {
+            return (ms / 1000).toFixed(4) + ' s';
+        }
+    };
+    
+    const formatNumber = (num) => {
+        return num.toLocaleString();
+    };
+    
+    let tableHTML = `
+        <div class="test-results">
+            <h4>Test Results (n=2 to n=30)</h4>
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>n</th>
+                        <th>Total Moves</th>
+                        <th>Recursive Time</th>
+                        <th>Iterative Time</th>
+                        <th>Faster</th>
+                        <th>Speed Ratio</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    results.forEach(result => {
+        const fasterClass = result.faster === 'Recursive' ? 'faster-recursive' : 'faster-iterative';
+        tableHTML += `
+            <tr>
+                <td>${result.n}</td>
+                <td>${formatNumber(result.moves)}</td>
+                <td class="${result.faster === 'Recursive' ? 'faster-cell' : ''}">${formatTime(result.recursiveTime)}</td>
+                <td class="${result.faster === 'Iterative' ? 'faster-cell' : ''}">${formatTime(result.iterativeTime)}</td>
+                <td class="${fasterClass}">${result.faster}</td>
+                <td>${result.ratio}x</td>
+            </tr>
+        `;
+    });
+    
+    tableHTML += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    testResultsTable.innerHTML = tableHTML;
+}
